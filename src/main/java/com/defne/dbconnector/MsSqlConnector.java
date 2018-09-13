@@ -1,25 +1,38 @@
 package com.defne.dbconnector;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Properties;
 
 public class MsSqlConnector extends SqlConnector implements GenerateQuery {
 	// JDBC driver name and database URL
-	static final String JDBC_DRIVER = "com.microsoft.sqlserver.jdbc.SQLServerDriver";  
+	String JDBC_DRIVER = "com.microsoft.sqlserver.jdbc.SQLServerDriver";  
     String DB_URL = "jdbc:sqlserver://";
     
     //Query
-    String FIELD_QUERY = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS "
-    +"WHERE TABLE_NAME = ?";
+    String FIELD_QUERY = "SELECT COLUMN_NAME AS COLUMNS " 
+    		+ "FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ?;";
     
-    String SELECT_QUERY = "SELECT * FROM $tablename WHERE $primarykey > ? "
-    		+ "ORDER BY $primarykey ASC LIMIT $pagesize";
+    String SELECT_QUERY = "SELECT * FROM $tablename ORDER BY $primarykey "
+    		+ "OFFSET $ ROWS FETCH NEXT 10 ROWS ONLY;";
+    
+    String SELECT_FIRST_QUERY = "SELECT TOP 1 * " + 
+    							"FROM $tablename " + 
+    							"ORDER BY $primarykey;";
    
     String COUNT_QUERY = "SELECT COUNT(*) FROM $tablename";
     
-    String QUERY_FOR_PRIMARY_KEY = "SELECT GROUP_CONCAT(COLUMN_NAME), TABLE_NAME "
-			+"FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=?"
-			+" AND CONSTRAINT_NAME=? AND TABLE_NAME=? GROUP BY TABLE_NAME;";
+    String QUERY_FOR_PRIMARY_KEY = "SELECT KU.table_name as TABLENAME,column_name as PRIMARYKEY " + 
+    		"FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS TC " + 
+    		"INNER JOIN " + 
+    		"INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS KU " + 
+    		"ON TC.CONSTRAINT_TYPE = 'PRIMARY KEY' AND " + 
+    		"TC.CONSTRAINT_NAME = KU.CONSTRAINT_NAME AND " + 
+    		"KU.table_name=? " + 
+    		"ORDER BY KU.TABLE_NAME, KU.ORDINAL_POSITION;";
     
     // Create singleton
  	private static MsSqlConnector msSqlConnector = new MsSqlConnector();
@@ -35,7 +48,7 @@ public class MsSqlConnector extends SqlConnector implements GenerateQuery {
     	
     	PreparedStatement statement = getConn().prepareStatement(SELECT_QUERY);
     	if (getLatestReadPrimaryKey() == null) {
-    		statement.setString(1,  "0");
+    		statement.setString(1,  firstRowKey);
     	} else {
     		statement.setString(1,  getLatestReadPrimaryKey());
     	}
@@ -59,11 +72,66 @@ public class MsSqlConnector extends SqlConnector implements GenerateQuery {
     
     public PreparedStatement generateQueryForPrimaryKey() throws SQLException {
     	PreparedStatement statement = getConn().prepareStatement(QUERY_FOR_PRIMARY_KEY);
-    	statement.setString(1, DB_NAME);
-    	statement.setString(2,  "PRIMARY");
-    	statement.setString(3, TABLE_NAME);
+    	statement.setString(1, TABLE_NAME);
     	
     	return statement;
+    }
+    
+    public PreparedStatement generateFirstRowQuery() throws SQLException{
+    	SELECT_FIRST_QUERY = SELECT_FIRST_QUERY.replace("$tablename", TABLE_NAME);
+    	SELECT_FIRST_QUERY = SELECT_FIRST_QUERY.replace("$primarykey", primaryKey);
+    	PreparedStatement statement = getConn().prepareStatement(SELECT_FIRST_QUERY);
+    	
+    	return statement;
+    }
+    
+    public void getDbProperties() throws IOException {
+  		Properties configProperties = new Properties();
+  		String path = "/Users/mac/dbtestworkspace/dbconnector/resources/config.properties";
+  		
+  		FileInputStream file = new FileInputStream(path);
+  		
+  		configProperties.load(file);
+  		file.close();
+  		
+  		String dbname = configProperties.getProperty("sql.dbname");
+  		if (dbname.contains(" ")) {
+  			throw new IllegalArgumentException();
+  		} else {
+  			this.DB_NAME = dbname; 
+  		}
+  		
+  		String tableName = configProperties.getProperty("sql.table_name");
+  		if (tableName.contains(" ")) {
+  			throw new IllegalArgumentException();
+  		} else {
+  			TABLE_NAME = tableName; 
+  		}
+  		
+  		this.USER = configProperties.getProperty("sql.username");
+  		this.PASS = configProperties.getProperty("sql.password");
+  		this.DB_URL += configProperties.getProperty("sql.host") + '/' + this.DB_NAME;
+  	}
+    
+    
+    public void createConnection() {
+    	try {
+			Class.forName(JDBC_DRIVER);
+		} catch (ClassNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+    	
+    	System.out.println("Connecting to database...");
+    	
+	    try {
+			setConn(DriverManager.getConnection(DB_URL,USER,PASS));
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	    
+	    System.out.println("Successfully connected to mysql db, " + this.DB_URL);
     }
     
 }

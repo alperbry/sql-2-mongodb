@@ -22,10 +22,10 @@ public class Test {
 		Thread consumer= new Thread(new ToMongo());
 		consumer.start();
 		
-		while (true) {
+		/*while (true) {
 			progressBar();
 			try {
-				Thread.sleep(100);
+				Thread.sleep(50);
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -34,7 +34,7 @@ public class Test {
 			if (insertedRowCount >= rowCount) {
 				break;
 			}
-		}
+		}*/
 		
 	}
 	

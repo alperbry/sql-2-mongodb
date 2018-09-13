@@ -1,9 +1,7 @@
 package com.defne.dbconnector;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -11,31 +9,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 
 public abstract class SqlConnector {
 	// JDBC driver name and database URL
-	static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";  
-    String DB_URL = "jdbc:mysql://";
+	String JDBC_DRIVER = "";  
+    String DB_URL = "";
     String DB_NAME = "";
     String TABLE_NAME = "";
     
     //  Database credentials
-    static String USER = "";
-    static String PASS = "";
+    String USER = "";
+    String PASS = "";
 	
-    // Query
-    String FIELD_QUERY = "SHOW COLUMNS FROM $tablename";
-    
-    String SELECT_QUERY = "SELECT * FROM $tablename WHERE $primarykey > ? "
-    		+ "ORDER BY $primarykey ASC LIMIT $pagesize";
-   
-    String COUNT_QUERY = "SELECT COUNT(*) FROM $tablename";
-    
-    String QUERY_FOR_PRIMARY_KEY = "SELECT GROUP_CONCAT(COLUMN_NAME), TABLE_NAME "
-			+"FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=?"
-			+" AND CONSTRAINT_NAME=? AND TABLE_NAME=? GROUP BY TABLE_NAME;";
     
     // Information on table
     static List<String> fieldNames = new ArrayList<String>();
@@ -44,11 +30,12 @@ public abstract class SqlConnector {
 	private int readCount;
 	private String latestReadPrimaryKey;
     static final int pageCapacity = 10000;
-    static String primaryKey = "";
+    static String primaryKey;
+    static String firstRowKey;
     
     // Connection
-    private static Connection conn;
-    public ResultSet rs;
+    protected static Connection conn;
+    protected ResultSet rs;
   	
   	
   	public static Connection getConn() {
@@ -56,6 +43,13 @@ public abstract class SqlConnector {
 	}
 
 
+	
+
+
+	public static void setConn(Connection conn) {
+		SqlConnector.conn = conn;
+	}
+	
 	public String getLatestReadPrimaryKey() {
 		return latestReadPrimaryKey;
 	}
@@ -65,69 +59,7 @@ public abstract class SqlConnector {
 		this.latestReadPrimaryKey = latestReadPrimaryKey;
 	}
 
-
-	public static void setConn(Connection conn) {
-		SqlConnector.conn = conn;
-	}
-
-
-	public void getDbProperties() throws IOException {
-  		Properties configProperties = new Properties();
-  		String path = "/Users/mac/dbtestworkspace/dbconnector/resources/config.properties";
-  		
-  		FileInputStream file = new FileInputStream(path);
-  		
-  		configProperties.load(file);
-  		file.close();
-  		
-  		String dbname = configProperties.getProperty("sql.dbname");
-  		if (dbname.contains(" ")) {
-  			throw new IllegalArgumentException();
-  		} else {
-  			DB_NAME = dbname; 
-  		}
-  		
-  		String tableName = configProperties.getProperty("sql.table_name");
-  		if (tableName.contains(" ")) {
-  			throw new IllegalArgumentException();
-  		} else {
-  			TABLE_NAME = tableName; 
-  		}
-  		
-  		USER = configProperties.getProperty("sql.username");
-  		PASS = configProperties.getProperty("sql.password");
-  		DB_URL += configProperties.getProperty("sql.host") + '/' + DB_NAME;
-  	}
-    
-    
-    public void createConnection() {
-    	try {
-			Class.forName(JDBC_DRIVER);
-		} catch (ClassNotFoundException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-    	
-    	System.out.println("Connecting to database...");
-    	
-	    try {
-			setConn(DriverManager.getConnection(DB_URL,USER,PASS));
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    }
-    
-    public void closeConnection() {
-    	try {
-			rs.close();
-			getConn().close();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    }
-    
+	
     public ResultSet execute(PreparedStatement statement) {
     	ResultSet result = null;
     	
@@ -156,6 +88,20 @@ public abstract class SqlConnector {
 		}
     }
     
+    public void getFirstRowKey() {
+    	try {	
+			//Retrieve by column name
+    		rs.next();
+    		String firstPrimaryKey = rs.getString(primaryKey);
+    		SqlConnector.firstRowKey = firstPrimaryKey;
+    		rs.previous();
+			
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
+    
     public void getFields() {
     	try {
 			while(rs.next()){
@@ -173,7 +119,7 @@ public abstract class SqlConnector {
     public void getPrimaryKey() {
     	try {
 			while(rs.next()){
-			     primaryKey = rs.getString("GROUP_CONCAT(COLUMN_NAME)");
+			     primaryKey = rs.getString("PRIMARYKEY");
 			  }
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
@@ -190,6 +136,10 @@ public abstract class SqlConnector {
 				for (String fieldName:fieldNames) {
 					String fieldData = rs.getString(fieldName);
 					tableMap.put(fieldName, fieldData);
+					
+					if (fieldName.equals(primaryKey)) {
+						setLatestReadPrimaryKey(fieldData);
+					}
 				}
 				if (!tableMap.isEmpty()) {
 					queue.put(tableMap);
@@ -197,7 +147,7 @@ public abstract class SqlConnector {
 				
 				increaseReadCount();
 			 }
-			
+		
 			if (rs.last()) {
 				for (String fieldName:fieldNames) {
 					String fieldData = rs.getString(fieldName);
@@ -267,5 +217,22 @@ public abstract class SqlConnector {
 		}
 	}
 
+	public void closeConnection() {
+    	try {
+			rs.close();
+			getConn().close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
+	}
+
+	public abstract PreparedStatement generateQueryForPrimaryKey() throws SQLException;
+	public abstract PreparedStatement generateQuery() throws SQLException;
+	public abstract PreparedStatement generateFieldQuery() throws SQLException;
+	public abstract PreparedStatement generateCountQuery() throws SQLException;
+	public abstract PreparedStatement generateFirstRowQuery() throws SQLException;
+	public abstract void createConnection();
+	public abstract void getDbProperties() throws IOException;
 }

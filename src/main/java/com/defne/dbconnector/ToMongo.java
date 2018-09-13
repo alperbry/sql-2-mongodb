@@ -29,7 +29,7 @@ public class ToMongo implements Runnable{
 		long startTime = System.currentTimeMillis();
 		
 		while (true) {
-			while (!Test.queue.isEmpty()) {			
+			while (!Test.queue.isEmpty()) {
 				mongoConnector.insertDocument(Test.queue.poll());
 				//System.out.println(Test.queue.size());				
 			}
