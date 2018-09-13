@@ -41,11 +41,7 @@ public abstract class SqlConnector {
   	public static Connection getConn() {
 		return conn;
 	}
-
-
-	
-
-
+  	
 	public static void setConn(Connection conn) {
 		SqlConnector.conn = conn;
 	}
@@ -78,7 +74,7 @@ public abstract class SqlConnector {
 			while(rs.next()){
 			     //Retrieve by column name
 			     int count = rs.getInt("COUNT");
-			     //Display values
+
 			     rowCount = count;
 			     Test.rowCount = rowCount;
 			  }
@@ -107,7 +103,6 @@ public abstract class SqlConnector {
 			while(rs.next()){
 			     //Retrieve by column name
 			     String field = rs.getString("Field");
-			     //Display values
 			     fieldNames.add(field);
 			  }
 		} catch (SQLException e) {

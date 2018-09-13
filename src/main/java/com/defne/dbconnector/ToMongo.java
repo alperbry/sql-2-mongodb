@@ -31,12 +31,11 @@ public class ToMongo implements Runnable{
 		while (true) {
 			while (!Test.queue.isEmpty()) {
 				mongoConnector.insertDocument(Test.queue.poll());
-				//System.out.println(Test.queue.size());				
 			}
 			
 			if (Test.hasFinishedReadingDb) {
 				long estimatedTime = System.currentTimeMillis() - startTime;
-				System.out.println("Time passed: "+ estimatedTime);
+				System.out.println("\nTime passed: "+ estimatedTime + " ms\n");
 				break;
 			}
 			

@@ -11,7 +11,7 @@ import java.util.Properties;
 
 public class MySqlConnector extends SqlConnector {
 	// JDBC driver name and database URL
-	String JDBC_DRIVER = "com.mysql.jdbc.Driver";  
+	final static String JDBC_DRIVER = "com.mysql.jdbc.Driver";  
 	String DB_URL = "jdbc:mysql://";
 	
     // Query
@@ -45,7 +45,7 @@ public class MySqlConnector extends SqlConnector {
     
     public void getDbProperties() throws IOException {
   		Properties configProperties = new Properties();
-  		String path = "/Users/mac/dbtestworkspace/dbconnector/resources/config.properties";
+  		String path = "./config.properties";
   		
   		FileInputStream file = new FileInputStream(path);
   		

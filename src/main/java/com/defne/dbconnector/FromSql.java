@@ -96,18 +96,18 @@ public class FromSql implements Runnable{
 			e1.printStackTrace();
 		}
 		
-		long startTime = System.currentTimeMillis();
+		//long startTime = System.currentTimeMillis();
 		
 		sqlConnector.rs = sqlConnector.execute(statement);
 		
-		long estimatedTime = System.currentTimeMillis() - startTime;
-		StringBuilder time = new StringBuilder();
-		time.append("Reading this page from db took ")
-				.append(estimatedTime)
-				.append(" ms\r");
-		System.out.println(time.toString());
+		//long estimatedTime = System.currentTimeMillis() - startTime;
+		//StringBuilder time = new StringBuilder();
+		//time.append("Reading this page from db took ")
+		//		.append(estimatedTime)
+		//		.append(" ms\r");
+		//System.out.println(time.toString());
 	
-		startTime = System.currentTimeMillis();
+		//startTime = System.currentTimeMillis();
 		try {
 			sqlConnector.extract(sqlConnector.rs, Test.queue);
 		} catch (InterruptedException e1) {
@@ -116,13 +116,13 @@ public class FromSql implements Runnable{
 		}
 		
 		
-		estimatedTime = System.currentTimeMillis() - startTime;
-		time = new StringBuilder();
-		time.append("Extracting this page from db took ")
-				.append(estimatedTime)
-				.append(" ms\r");
+		//estimatedTime = System.currentTimeMillis() - startTime;
+		//time = new StringBuilder();
+		//time.append("Extracting this page from db took ")
+		//		.append(estimatedTime)
+		//		.append(" ms\r");
 		
-		System.out.println(time.toString());		
+		//System.out.println(time.toString());		
 	}
 	
 	public static void configureConnection() {

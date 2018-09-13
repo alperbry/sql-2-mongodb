@@ -7,7 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Properties;
 
-public class MsSqlConnector extends SqlConnector implements GenerateQuery {
+public class MsSqlConnector extends SqlConnector {
 	// JDBC driver name and database URL
 	String JDBC_DRIVER = "com.microsoft.sqlserver.jdbc.SQLServerDriver";  
     String DB_URL = "jdbc:sqlserver://";
@@ -87,7 +87,7 @@ public class MsSqlConnector extends SqlConnector implements GenerateQuery {
     
     public void getDbProperties() throws IOException {
   		Properties configProperties = new Properties();
-  		String path = "/Users/mac/dbtestworkspace/dbconnector/resources/config.properties";
+  		String path = "./config.properties";
   		
   		FileInputStream file = new FileInputStream(path);
   		
