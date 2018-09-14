@@ -17,7 +17,9 @@ public class MySqlConnector extends SqlConnector {
     // Query
     String FIELD_QUERY = "SHOW COLUMNS FROM $tablename";
     
-    String SELECT_QUERY = "SELECT * FROM $tablename WHERE $primarykey > ? "
+    String SELECT_QUERY = "SELECT * FROM $tablename LIMIT $readcount, $pagesize";
+    
+    String OPTIMIZED_SELECT_QUERY = "SELECT * FROM $tablename WHERE $primarykey > ? "
     		+ "ORDER BY $primarykey ASC LIMIT $pagesize";
     
     String SELECT_FIRST_QUERY = "SELECT * "
@@ -45,7 +47,7 @@ public class MySqlConnector extends SqlConnector {
     
     public void getDbProperties() throws IOException {
   		Properties configProperties = new Properties();
-  		String path = "./config.properties";
+  		String path = "/Users/mac/dbtestworkspace/dbconnector/resources/config.properties";
   		
   		FileInputStream file = new FileInputStream(path);
   		
@@ -72,38 +74,45 @@ public class MySqlConnector extends SqlConnector {
   	}
     
     
-    public void createConnection() {
-    	try {
-			Class.forName(JDBC_DRIVER);
-		} catch (ClassNotFoundException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-    	
+    public void createConnection() throws ClassNotFoundException, SQLException  {
+		Class.forName(JDBC_DRIVER);
+
     	System.out.println("Connecting to database...");
     	
-	    try {
-			setConn(DriverManager.getConnection(DB_URL,USER,PASS));
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	    
+		setConn(DriverManager.getConnection(DB_URL,USER,PASS));
+
 	    System.out.println("Successfully connected to mysql db, " + this.DB_URL);
     }
     
     
     public PreparedStatement generateQuery() throws SQLException {
-    	SELECT_QUERY = SELECT_QUERY.replace("$tablename", TABLE_NAME)
-    							   .replace("$primarykey", primaryKey)
-    							   .replace("$pagesize", Integer.toString(pageCapacity));	
+    	PreparedStatement statement = null;
     	
-    	PreparedStatement statement = getConn().prepareStatement(SELECT_QUERY);
-    	if (getLatestReadPrimaryKey() == null) {
-    		statement.setString(1,  firstRowKey);
+    	////
+    	//If the sql table has primary key
+    	//optimized query can be made in the else case
+    	////
+    	
+    	if (primaryKey == null || primaryKey.isEmpty()) {
+    		SELECT_QUERY = SELECT_QUERY.replace("$tablename", TABLE_NAME)
+					   .replace("$readcount", Integer.toString(getReadCount()))
+					   .replace("$pagesize", Integer.toString(pageCapacity));	
+
+			statement = getConn().prepareStatement(SELECT_QUERY);
+			
     	} else {
-    		statement.setString(1,  getLatestReadPrimaryKey());
+    		SELECT_QUERY = OPTIMIZED_SELECT_QUERY.replace("$tablename", TABLE_NAME)
+					   .replace("$primarykey", primaryKey)
+					   .replace("$pagesize", Integer.toString(pageCapacity));	
+
+			statement = getConn().prepareStatement(SELECT_QUERY);
+			if (getLatestReadPrimaryKey() == null) {
+				statement.setString(1,  firstRowValueOfKey);
+			} else {
+				statement.setString(1,  getLatestReadPrimaryKey());
+			}
     	}
+    	
     	
     	return statement;
     }

@@ -22,7 +22,7 @@ public class Test {
 		Thread consumer= new Thread(new ToMongo());
 		consumer.start();
 		
-		progressBar();
+		//progressBar();
 		
 	}
 	

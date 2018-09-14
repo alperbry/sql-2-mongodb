@@ -30,16 +30,23 @@ public class FromSql implements Runnable{
 		}
 	}
 	
-	public static void getPrimaryKeyOfTable() {
+	public static boolean getPrimaryKeyOfTable() {
+		boolean status = false;
 		try {
 			PreparedStatement statement = null;
 			statement = sqlConnector.generateQueryForPrimaryKey();
 			sqlConnector.rs = sqlConnector.execute(statement);
-			sqlConnector.getPrimaryKey();
+			if (sqlConnector.getPrimaryKey()) {
+				status = true;
+			} else {
+				status = false;
+			}
 		} catch (SQLException e2) {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
 		}
+		
+		return status;
 	}
 	
 	public static void getRowCountOfTable() {
@@ -127,11 +134,26 @@ public class FromSql implements Runnable{
 	
 	public static void configureConnection() {
 		readProperties();
-		sqlConnector.createConnection();
 		
-		getPrimaryKeyOfTable();
-		getRowCountOfTable();
-		getFieldsOfTable();
-		getFirstRow();
+		try {
+			sqlConnector.createConnection();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			
+			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		if (getPrimaryKeyOfTable()) {
+			getRowCountOfTable();
+			getFieldsOfTable();
+			getFirstRow();
+		} else {
+			getRowCountOfTable();
+			getFieldsOfTable();
+		}
+		
 	}
 }

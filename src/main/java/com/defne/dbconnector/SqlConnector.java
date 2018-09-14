@@ -28,10 +28,11 @@ public abstract class SqlConnector {
     static Map<String,Object> tableMap;
     private int rowCount;
 	private int readCount;
+	
 	private String latestReadPrimaryKey;
     static final int pageCapacity = 10000;
     static String primaryKey;
-    static String firstRowKey;
+    static String firstRowValueOfKey;
     
     // Connection
     protected static Connection conn;
@@ -88,8 +89,8 @@ public abstract class SqlConnector {
     	try {	
 			//Retrieve by column name
     		rs.next();
-    		String firstPrimaryKey = rs.getString(primaryKey);
-    		SqlConnector.firstRowKey = firstPrimaryKey;
+    		String firstRowValueOfKey = rs.getString(primaryKey);
+    		SqlConnector.firstRowValueOfKey = firstRowValueOfKey;
     		rs.previous();
 			
 		} catch (SQLException e) {
@@ -111,7 +112,7 @@ public abstract class SqlConnector {
 		}
     }
     
-    public void getPrimaryKey() {
+    public boolean getPrimaryKey() {
     	try {
 			while(rs.next()){
 			     primaryKey = rs.getString("PRIMARYKEY");
@@ -120,6 +121,12 @@ public abstract class SqlConnector {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+    	
+    	if (primaryKey == null || primaryKey.isEmpty()) {
+    		return false;
+    	} else {
+    		return true;
+    	}
     }
 	
     public void extract(ResultSet rs, BlockingQueue<Map<String, Object>> queue) throws InterruptedException {
@@ -175,6 +182,11 @@ public abstract class SqlConnector {
     public int getReadCount() {
 		return readCount;
 	}
+    
+    public void setReadCount(int readCount) {
+		this.readCount = readCount;
+	}
+    
 	public int getRowCount() {
 		return rowCount;
 	}
@@ -228,6 +240,6 @@ public abstract class SqlConnector {
 	public abstract PreparedStatement generateFieldQuery() throws SQLException;
 	public abstract PreparedStatement generateCountQuery() throws SQLException;
 	public abstract PreparedStatement generateFirstRowQuery() throws SQLException;
-	public abstract void createConnection();
+	public abstract void createConnection() throws ClassNotFoundException, SQLException;
 	public abstract void getDbProperties() throws IOException;
 }

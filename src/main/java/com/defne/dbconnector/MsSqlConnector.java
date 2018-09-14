@@ -16,8 +16,13 @@ public class MsSqlConnector extends SqlConnector {
     String FIELD_QUERY = "SELECT COLUMN_NAME AS COLUMNS " 
     		+ "FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ?;";
     
-    String SELECT_QUERY = "SELECT * FROM $tablename ORDER BY $primarykey "
-    		+ "OFFSET $ ROWS FETCH NEXT 10 ROWS ONLY;";
+    String SELECT_QUERY = "SELECT * FROM $tablename ORDER BY $orderfield "
+    		+ "OFFSET $readcount ROWS FETCH NEXT $pagesize ROWS ONLY;";
+    
+    String OPTIMIZED_SELECT_QUERY = "SELECT TOP $pagesize *" + 
+    		"FROM $tablename " + 
+    		"WHERE $primarykey >= ?" + 
+    		"ORDER BY $primarykey";
     
     String SELECT_FIRST_QUERY = "SELECT TOP 1 * " + 
     							"FROM $tablename " + 
@@ -42,17 +47,34 @@ public class MsSqlConnector extends SqlConnector {
  	}
    	
    	public PreparedStatement generateQuery() throws SQLException {
-    	SELECT_QUERY = SELECT_QUERY.replace("$tablename", TABLE_NAME)
-    							   .replace("$primarykey", primaryKey)
-    							   .replace("$pagesize", Integer.toString(pageCapacity));	
+   		PreparedStatement statement = null;
     	
-    	PreparedStatement statement = getConn().prepareStatement(SELECT_QUERY);
-    	if (getLatestReadPrimaryKey() == null) {
-    		statement.setString(1,  firstRowKey);
-    	} else {
-    		statement.setString(1,  getLatestReadPrimaryKey());
-    	}
-    	
+    	////
+    	//If the sql table has primary key
+    	//optimized query can be made in the else case
+    	////
+   		
+   		if (primaryKey == null || primaryKey.isEmpty()) {
+   			SELECT_QUERY = SELECT_QUERY.replace("$tablename", TABLE_NAME)
+					   .replace("$orderfield", fieldNames.get(0))
+					   .replace("$pagesize", Integer.toString(pageCapacity));	
+   			
+   			statement = getConn().prepareStatement(SELECT_QUERY);
+   			
+   		} else {
+   			SELECT_QUERY = SELECT_QUERY.replace("$tablename", TABLE_NAME)
+   						.replace("$pagesize", Integer.toString(pageCapacity))
+   						.replace("$primarykey", primaryKey);
+   			
+   			statement = getConn().prepareStatement(SELECT_QUERY);
+   			
+   			if (getLatestReadPrimaryKey() == null) {
+				statement.setString(1,  firstRowValueOfKey);
+			} else {
+				statement.setString(1,  getLatestReadPrimaryKey());
+			}
+   		}
+   		
     	return statement;
     }
     
@@ -87,7 +109,7 @@ public class MsSqlConnector extends SqlConnector {
     
     public void getDbProperties() throws IOException {
   		Properties configProperties = new Properties();
-  		String path = "./config.properties";
+  		String path = "/Users/mac/dbtestworkspace/dbconnector/resources/config.properties";
   		
   		FileInputStream file = new FileInputStream(path);
   		
